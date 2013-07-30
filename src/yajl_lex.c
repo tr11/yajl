@@ -87,6 +87,9 @@ struct yajl_lexer_t {
     /* shall we allow comments? */
     unsigned int allowComments;
 
+    /* shall we allow special values (-Infinity, Infinity, NaN)? */
+    unsigned int allowSpecialValues;
+    
     /* shall we validate utf8 inside strings? */
     unsigned int validateUTF8;
 
@@ -102,13 +105,14 @@ struct yajl_lexer_t {
 
 yajl_lexer
 yajl_lex_alloc(yajl_alloc_funcs * alloc,
-               unsigned int allowComments, unsigned int validateUTF8)
+               unsigned int allowComments, unsigned int validateUTF8, unsigned int allowSpecialValues)
 {
     yajl_lexer lxr = (yajl_lexer) YA_MALLOC(alloc, sizeof(struct yajl_lexer_t));
     memset((void *) lxr, 0, sizeof(struct yajl_lexer_t));
     lxr->buf = yajl_buf_alloc(alloc);
     lxr->allowComments = allowComments;
     lxr->validateUTF8 = validateUTF8;
+    lxr->allowSpecialValues = allowSpecialValues;
     lxr->alloc = alloc;
     return lxr;
 }
@@ -502,6 +506,7 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
 {
     yajl_tok tok = yajl_tok_error;
     unsigned char c;
+    size_t offset_helper;
     size_t startOffset = *offset;
 
     *outBuf = NULL;
@@ -593,12 +598,76 @@ yajl_lex_lex(yajl_lexer lexer, const unsigned char * jsonText,
                 tok = yajl_tok_null;
                 goto lexed;
             }
+            case 'N': {
+                const char * want = "aN";
+                do {
+                    if (*offset >= jsonTextLen) {
+                        tok = yajl_tok_eof;
+                        goto lexed;
+                    }
+                    c = readChar(lexer, jsonText, offset);
+                    if (c != *want) {
+                        unreadChar(lexer, offset);
+                        lexer->error = yajl_lex_invalid_string;
+                        tok = yajl_tok_error;
+                        goto lexed;
+                    }
+                } while (*(++want));
+                tok = yajl_tok_double;
+                if (!lexer->allowSpecialValues) {
+                  lexer->error = yajl_lex_invalid_special_number;
+                  tok = yajl_tok_error;
+                }
+                goto lexed;
+            }
+            case 'I': {
+                const char * want = "nfinity";
+                do {
+                    if (*offset >= jsonTextLen) {
+                        tok = yajl_tok_eof;
+                        goto lexed;
+                    }
+                    c = readChar(lexer, jsonText, offset);
+                    if (c != *want) {
+                        unreadChar(lexer, offset);
+                        lexer->error = yajl_lex_invalid_string;
+                        tok = yajl_tok_error;
+                        goto lexed;
+                    }
+                } while (*(++want));
+                tok = yajl_tok_double;
+                if (!lexer->allowSpecialValues) {
+                  lexer->error = yajl_lex_invalid_special_number;
+                  tok = yajl_tok_error;
+                }
+                goto lexed;
+            }
             case '"': {
                 tok = yajl_lex_string(lexer, (const unsigned char *) jsonText,
                                       jsonTextLen, offset);
                 goto lexed;
             }
             case '-':
+                offset_helper = *offset;
+                const char * want = "Infinity";
+                do {
+                    if (offset_helper >= jsonTextLen) {
+                        goto lex_number;
+                    }
+                    c = readChar(lexer, jsonText, &offset_helper);
+                    if (c != *want) {
+                        unreadChar(lexer, &offset_helper);
+                        goto lex_number;
+                    }
+                } while (*(++want));
+                tok = yajl_tok_double;
+                *offset = offset_helper;
+                if (!lexer->allowSpecialValues) {
+                  lexer->error = yajl_lex_invalid_special_number;
+                  tok = yajl_tok_error;
+                }
+                goto lexed;
+                lex_number:
             case '0': case '1': case '2': case '3': case '4': 
             case '5': case '6': case '7': case '8': case '9': {
                 /* integer parsing wants to start from the beginning */
@@ -718,6 +787,8 @@ yajl_lex_error_to_string(yajl_lex_error error)
         case yajl_lex_unallowed_comment:
             return "probable comment found in input text, comments are "
                    "not enabled.";
+        case yajl_lex_invalid_special_number:
+            return "invalid floating number special value (-Infinity, Infinity, NaN)";
     }
     return "unknown error code";
 }

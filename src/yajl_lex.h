@@ -49,7 +49,8 @@ typedef struct yajl_lexer_t * yajl_lexer;
 
 yajl_lexer yajl_lex_alloc(yajl_alloc_funcs * alloc,
                           unsigned int allowComments,
-                          unsigned int validateUTF8);
+                          unsigned int validateUTF8,
+                          unsigned int allowSpecialValues);
 
 void yajl_lex_free(yajl_lexer lexer);
 
@@ -95,7 +96,8 @@ typedef enum {
     yajl_lex_missing_integer_after_decimal,
     yajl_lex_missing_integer_after_exponent,
     yajl_lex_missing_integer_after_minus,
-    yajl_lex_unallowed_comment
+    yajl_lex_unallowed_comment,
+    yajl_lex_invalid_special_number
 } yajl_lex_error;
 
 const char * yajl_lex_error_to_string(yajl_lex_error error);

@@ -220,13 +220,24 @@ yajl_gen_double(yajl_gen g, double number)
 {
     char i[32];
     ENSURE_VALID_STATE; ENSURE_NOT_KEY; 
-    if (isnan(number) || isinf(number)) return yajl_gen_invalid_number;
+    if(!yajl_gen_special_floating_values & (isnan(number) || isinf(number))) return yajl_gen_invalid_number;
     INSERT_SEP; INSERT_WHITESPACE;
-    sprintf(i, "%.20g", number);
-    if (strspn(i, "0123456789-") == strlen(i)) {
-        strcat(i, ".0");
+    if(isnan(number)) {
+      g->print(g->ctx, "NaN", 3);
     }
-    g->print(g->ctx, i, (unsigned int)strlen(i));
+    else if(isinf(number)) {
+      if(number<0)
+        g->print(g->ctx, "-Infinity", 9);
+      else
+        g->print(g->ctx, "Infinity", 8);
+    }
+    else {
+      sprintf(i, "%.20g", number);
+      if (strspn(i, "0123456789-") == strlen(i)) {
+          strcat(i, ".0");
+      }
+      g->print(g->ctx, i, (unsigned int)strlen(i));
+    }
     APPENDED_ATOM;
     FINAL_NEWLINE;
     return yajl_gen_status_ok;

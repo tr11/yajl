@@ -159,7 +159,8 @@ static void usage(const char * progname)
             "   -g  allow *g*arbage after valid JSON text\n"
             "   -m  allows the parser to consume multiple JSON values\n"
             "       from a single string separated by whitespace\n"
-            "   -p  partial JSON documents should not cause errors\n",
+            "   -p  partial JSON documents should not cause errors\n"
+            "   -s  allow special values (-Infinity, Infinity, NaN)\n",
             progname);
     exit(1);
 }
@@ -219,6 +220,8 @@ main(int argc, char ** argv)
             yajl_config(hand, yajl_allow_multiple_values, 1);
         } else if (!strcmp("-p", argv[i])) {
             yajl_config(hand, yajl_allow_partial_values, 1);
+        } else if (!strcmp("-s", argv[i])) {
+            yajl_config(hand, yajl_allow_special_floating_values, 1);
         } else {
             fprintf(stderr, "invalid command line option: '%s'\n",
                     argv[i]);

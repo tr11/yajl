@@ -98,7 +98,11 @@ extern "C" {
          * iterest of saving bytes.  Setting this flag will cause YAJL to
          * always escape '/' in generated JSON strings.
          */
-        yajl_gen_escape_solidus = 0x10
+        yajl_gen_escape_solidus = 0x10,
+        /**
+         * Allow NaN, Infinity, and -Infinity as literals
+         */
+        yajl_gen_special_floating_values = 0x20
     } yajl_gen_option;
 
     /** allow the modification of generator options subsequent to handle

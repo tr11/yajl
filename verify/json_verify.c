@@ -27,7 +27,8 @@ usage(const char * progname)
                     "usage: json_verify [options]\n"
                     "    -q quiet mode\n"
                     "    -c allow comments\n"
-                    "    -u allow invalid utf8 inside strings\n",
+                    "    -u allow invalid utf8 inside strings\n"
+                    "    -s allow special values (-Infinity, Infinity, NaN)\n",
             progname);
     exit(1);
 }
@@ -59,6 +60,9 @@ main(int argc, char ** argv)
                     break;
                 case 'u':
                     yajl_config(hand, yajl_dont_validate_strings, 1);
+                    break;
+                case 's':
+                    yajl_config(hand, yajl_allow_special_floating_values, 1);
                     break;
                 default:
                     fprintf(stderr, "unrecognized option: '%c'\n\n", argv[a][i]);
